@@ -6,3 +6,5 @@ scikit-learn
 folium
 ipython
 jupyterlab
+prophet
+plotly
