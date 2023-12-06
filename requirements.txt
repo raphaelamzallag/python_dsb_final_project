@@ -8,3 +8,5 @@ ipython
 jupyterlab
 prophet
 plotly
+xgboost
+lockdowndates
