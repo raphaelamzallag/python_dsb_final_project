@@ -12,3 +12,4 @@ xgboost
 lockdowndates
 jours_feries_france
 vacances_scolaires_france
+catboost
