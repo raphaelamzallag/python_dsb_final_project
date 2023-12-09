@@ -5,6 +5,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from lockdowndates.core import LockdownDates
 from jours_feries_france import JoursFeries
 from vacances_scolaires_france import SchoolHolidayDates
+import datetime 
 
 problem_title = "Bike count prediction"
 _target_column_name = "log_bike_count"
@@ -97,8 +98,33 @@ def isLockdown(X):
     X['date_merge'] = pd.to_datetime(X['date'].dt.strftime('%Y-%m-%d'), format='%Y-%m-%d')
     X_ld = X.merge(ld, how = 'left', on = 'date_merge')
     X_ld = X_ld.drop(['france_masks', 'france_country_code', 'date_merge'], axis=1)
-    #X_ld['france_stay_at_home'] = X_ld['france_stay_at_home'].map(lambda x: 1 if x == 2 else 0)\n",
-    return X_ld
+    X_ld['france_stay_at_home'] = X_ld['france_stay_at_home'].map(lambda x: 1 if x == 2 else 0)
+    return X_ld.rename(columns = {'france_stay_at_home':'is_lockdown'})
+
+def is_lockdown(X, date_column='date'):
+    # Définir les plages de dates à vérifier (sans tenir compte des heures)
+    date_ranges = [
+        {"start": datetime.datetime(2020, 3, 17), "end": datetime.datetime(2020, 5, 11)},
+        {"start": datetime.datetime(2020, 10, 30), "end": datetime.datetime(2020, 12, 15)},
+        {"start": datetime.datetime(2021, 4, 3), "end": datetime.datetime(2021, 5, 3)}
+    ]
+
+    # Fonction pour vérifier si une date est dans l'un des intervalles
+    def is_date_in_range(date):
+        if not isinstance(date, str):
+            date = date.strftime('%Y-%m-%d')
+
+        dt = datetime.datetime.strptime(date, '%Y-%m-%d')
+        for period in date_ranges:
+            if period["start"].date() <= dt.date() <= period["end"].date():
+                return 1
+        return 0
+
+    # Appliquer la fonction à la colonne 'date' et créer une nouvelle colonne pour le résultat
+    X['is_lockdown'] = X[date_column].apply(is_date_in_range)
+
+    return X
+
 
 
 def encode_cyclical_features(df):
@@ -130,9 +156,50 @@ def _encode_dates(X):
     X["hour"] = X["date"].dt.hour
     X["is_weekend"] = X["weekday"].map(lambda x: 1 if x == 6 or x == 5 else 0)
     # Finally we can drop the original columns from the dataframe
-    return X.drop(columns=["date"])
+    return X#.drop(columns=["date"])
 
 def filter_columns(X):
-    columns_to_keep = ['date', 'latitude', 'longitude']
+    columns_to_keep = ['date', 'counter_id','latitude', 'longitude']
     return X[columns_to_keep]
 
+
+def apply_couvre_feu(df, date_column='date'):
+
+    couvre_feu_periods = [
+        {"start": datetime.datetime(2020, 10, 17), "end": datetime.datetime(2020, 10, 29), "start_time": datetime.time(21, 0), "end_time": datetime.time(6, 0)},
+        {"start": datetime.datetime(2021, 1, 16), "end": datetime.datetime(2021, 6, 20), "start_time": datetime.time(21, 0), "end_time": datetime.time(6, 0)},
+    ]
+
+    def is_couvre_feu(date_heure):
+
+        if not isinstance(date_heure, str):
+            date_heure = date_heure.strftime('%Y-%m-%d %H:%M')
+
+        dt = datetime.datetime.strptime(date_heure, '%Y-%m-%d %H:%M')
+        for period in couvre_feu_periods:
+            if period["start"].date() <= dt.date() <= period["end"].date():
+                if ((dt.time() >= period["start_time"]) or (dt.time() < period["end_time"])):
+                    return 1
+        return 0
+
+    df['is_couvre_feu'] = df[date_column].apply(is_couvre_feu)
+    return df
+
+def create_rain(X):
+    X['rain'] = X['icon_encoded'].map(lambda x: 1 if x == 1 else 0)
+    return X
+
+def prepro(X):
+    ext_df = pd.read_csv('external_data/external_data.csv')
+    ext_df['date'] = pd.to_datetime(ext_df['date'].values.astype('<M8[us]'))
+    data = is_jour_ferie(
+    is_lockdown(
+        create_x_weather(
+            apply_couvre_feu(
+                filter_columns(X)
+            )
+        )
+    )
+    )
+    result = _encode_dates(data).drop(columns=['date'])
+    return result
