@@ -30,7 +30,7 @@ def get_train_data(path="data/train.parquet"):
     return X_df, y_array
 
 def create_x_weather(X):
-    weather_wi = pd.read_csv('data/weather_data_paris_daily.csv')
+    weather_wi = pd.read_csv('data/weather_data.csv')
     
     columns_to_keep = ['datetime', 'temp', 'precip', 'windspeed', 'visibility']
     weather = weather_wi[columns_to_keep].copy().rename(columns={'datetime':'date'})
@@ -167,9 +167,11 @@ def apply_couvre_feu(df, date_column='date'):
 
     couvre_feu_periods = [
         {"start": datetime.datetime(2020, 10, 17), "end": datetime.datetime(2020, 10, 29), "start_time": datetime.time(21, 0), "end_time": datetime.time(6, 0)},
-        {"start": datetime.datetime(2021, 1, 16), "end": datetime.datetime(2021, 6, 20), "start_time": datetime.time(21, 0), "end_time": datetime.time(6, 0)},
+        {"start": datetime.datetime(2021, 1, 16), "end": datetime.datetime(2021, 3, 20), "start_time": datetime.time(18, 0), "end_time": datetime.time(6, 0)},
+            {"start": datetime.datetime(2021, 3, 21), "end": datetime.datetime(2021, 5, 19), "start_time": datetime.time(19, 0), "end_time": datetime.time(6, 0)},
+            {"start": datetime.datetime(2021, 5, 20), "end": datetime.datetime(2021, 6, 9), "start_time": datetime.time(21, 0), "end_time": datetime.time(6, 0)},
+            {"start": datetime.datetime(2021, 6, 10), "end": datetime.datetime(2021, 6, 20), "start_time": datetime.time(23, 0), "end_time": datetime.time(6, 0)}
     ]
-
     def is_couvre_feu(date_heure):
 
         if not isinstance(date_heure, str):
