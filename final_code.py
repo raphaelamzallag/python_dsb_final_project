@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import numpy as np
@@ -7,7 +8,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import utils
-#from pathlib import Path
+
+# from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.compose import ColumnTransformer
@@ -19,52 +21,50 @@ from catboost import CatBoostRegressor
 import datetime
 from datetime import timedelta, date
 
-#PREPROCESSING AND MERGE WEATHER DATA
+# PREPROCESSING AND MERGE WEATHER DATA
 X, y = utils.get_train_data()
 
 #
-num_features = ['temp', 'precip', 'windspeed', 'visibility']
-cat_features = ['counter_id']
-time_features = ['hour','month','weekday','day']
+num_features = ["temp", "precip", "windspeed", "visibility"]
+cat_features = ["counter_id"]
+time_features = ["hour", "month", "weekday", "day"]
 
 col_transformer = ColumnTransformer(
     transformers=[
-        ('num', StandardScaler(), num_features),
-        ('cat', OneHotEncoder(sparse=False), cat_features),
-        ('time', FunctionTransformer(utils.encode_cyclical_features), time_features)
+        ("num", StandardScaler(), num_features),
+        ("cat", OneHotEncoder(sparse=False), cat_features),
+        ("time", FunctionTransformer(utils.encode_cyclical_features), time_features),
     ],
-    remainder='passthrough'
+    remainder="passthrough",
 )
 
-#Temporal Train Test Split
-X_train, y_train, X_test, y_test = utils.train_test_split_temporal(X, y, delta_threshold="30 days")
-
-#Create the Model
-cat = CatBoostRegressor(
-    depth=12,
-    iterations=1500,
-    rsm=0.35,
-    subsample=0.7,
-    verbose=0
+# Temporal Train Test Split
+X_train, y_train, X_test, y_test = utils.train_test_split_temporal(
+    X, y, delta_threshold="30 days"
 )
 
-#Create pipeline with preprocessing (merge data), column_transformer, and CatBoostRegressor 
-pipe = Pipeline([
-    ('prepro',FunctionTransformer(utils.prepro)),
-    ('col', col_transformer),
-    ('model', cat)
-])
+# Create the Model
+cat = CatBoostRegressor(depth=12, iterations=1500, rsm=0.35, subsample=0.7, verbose=0)
 
-#Fitting the model
+# Create pipeline with preprocessing (merge data), column_transformer, and CatBoostRegressor
+pipe = Pipeline(
+    [
+        ("prepro", FunctionTransformer(utils.prepro)),
+        ("col", col_transformer),
+        ("model", cat),
+    ]
+)
+
+# Fitting the model
 pipe.fit(X_train, y_train)
 
 predictions = pipe.predict(X_test)
 
 rmse = np.sqrt(mean_squared_error(y_test, predictions))
-print(f'Root Mean Squared Error: {rmse}')
+print(f"Root Mean Squared Error: {rmse}")
 
 
-#Refitting on the whole dataset for Kaggle Submission
+# Refitting on the whole dataset for Kaggle Submission
 pipe.fit(X, y)
 y_pred = pipe.predict(X_test)
 results = pd.DataFrame(
@@ -74,5 +74,5 @@ results = pd.DataFrame(
     )
 )
 
-#Exporting results
+# Exporting results
 results.to_csv("new_submission.csv", index=False)
